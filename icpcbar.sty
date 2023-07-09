@@ -1,0 +1,58 @@
+% Author : @evenharder
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{icpcbar}[2023/06/26 ICPCBar]
+
+\RequirePackage{xcolor}
+\RequirePackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usetikzlibrary{math} %needed tikz library
+
+% https://personal.sron.nl/~pault/#sec:qualitative
+% Light qualitative colour scheme by Paul Tol
+\definecolor{tollightblue}{HTML}{77AADD}
+\definecolor{tollightcyan}{HTML}{99DDFF}
+\definecolor{tolmint}{HTML}{44BB99}
+\definecolor{tolpear}{HTML}{BBCC33}
+\definecolor{tololive}{HTML}{AAAA00}
+\definecolor{tollightyellow}{HTML}{EEDD88}
+\definecolor{tolorange}{HTML}{EE8866}
+\definecolor{tolpink}{HTML}{FFAABB}
+\definecolor{tolpalegrey}{HTML}{DDDDDD}
+
+\newcommand{\icpcsubbar}[3]
+{
+    \begin{tikzpicture}
+        \tikzmath{\icpcinterval = #2; \icpclength = #3;}
+        \begin{axis}[
+            ybar stacked,
+            %ybar=0pt, % No gap between bars
+            %hide x axis,
+            %hide y axis,
+            x axis line style = {opacity = 0},
+            y axis line style = {opacity = 0},
+            scale only axis,
+            bar shift=0pt,
+            xtick=\empty,
+            xticklabels=\empty,
+            xmin=-2/3*\icpcinterval,
+            xmax=\icpclength,
+            enlarge x limits={abs=\icpcinterval},
+            ytick=\empty,
+            yticklabels=\empty,
+            y=0.39em, % #2 related
+            bar width=0.36em, % #2 related
+            extra x ticks = -2/3*\icpcinterval,
+            extra x tick labels={},
+            extra x tick style={grid=major,major grid style={draw=black}},
+            extra y ticks = 0,
+            extra y tick labels={},
+            extra y tick style={grid=major,major grid style={draw=black}},
+        ]
+            \addplot[tolmint!75!white, fill=tolmint] table [y index=1] {#1};
+            \addplot[tolpink!75!white, fill=tolpink] table [y index=2] {#1};
+            \addplot[tollightyellow!75!white, fill=tollightyellow] table [y index=3] {#1};
+        \end{axis}
+        % https://tex.stackexchange.com/questions/464399/include-negative-value-in-sum-total-value-in-stacked-bar-chart
+        % https://latex.net/tufte-bar-charts/
+    \end{tikzpicture}
+}
