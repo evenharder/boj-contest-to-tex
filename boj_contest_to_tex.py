@@ -1,5 +1,157 @@
 from bs4 import BeautifulSoup
 
+
+class BOJContestProblem:
+    def __init__(self):
+        self._is_frozen = False
+        self._id = None
+        self._name = None
+        self._ac_num = None
+        self._ac_ratio = None
+        self._total_sub = None
+        self._fs_time = None
+        self._fs_teamname = None
+        self._fs_teammate = None
+        self._author = None
+
+    @property
+    def is_frozen(self):
+        return self._is_frozen
+
+    @is_frozen.setter
+    def is_frozen(self, val):
+        self._is_frozen = val
+
+    @property
+    def id(self):
+        return self._id
+
+    @id.setter
+    def id(self, val):
+        self._id = val
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, val):
+        self._name = val
+
+    @property
+    def ac_num(self):
+        if self._is_frozen:
+            return str(self._ac_num) + ' + ?'
+        return int(self._ac_num)
+
+    @ac_num.setter
+    def ac_num(self, val):
+        self._ac_num = int(val)
+
+    @property
+    def ac_ratio(self):
+        if self._is_frozen:
+            return str(f'??.???\%')
+        elif self._ac_num:
+            return self._ac_ratio
+        else:
+            return f'-\%'
+
+    @ac_ratio.setter
+    def ac_ratio(self, val):
+        self._ac_ratio = str(val).replace('%', f'\%')
+
+    @property
+    def total_sub(self):
+        if self._is_frozen:
+            return str(self._total_sub) + ' + ?'
+        return self._total_sub
+
+    @total_sub.setter
+    def total_sub(self, val):
+        self._total_sub = int(val)
+
+    @property
+    def fs_time(self):
+        if self._fs_time is None:
+            if self._is_frozen:
+                return '???'
+            else:
+                return '--'
+        return self._fs_time
+
+    @fs_time.setter
+    def fs_time(self, val):
+        self._fs_time = int(''.join([x for x in str(val) if x.isdigit()]))
+
+    @property
+    def fs_teamname(self):
+        if self._fs_teamname is None:
+            if self._is_frozen:
+                return '???'
+            else:
+                return '--'
+        return self._fs_teamname
+
+    @fs_teamname.setter
+    def fs_teamname(self, val):
+        self._fs_teamname = val
+
+    @property
+    def fs_teammate(self):
+        if self._fs_teammate is None:
+            if self._is_frozen:
+                return '(?, ?, ?)'
+            else:
+                return '-, -, -'
+        return self._fs_teammate
+
+    @fs_teammate.setter
+    def fs_teammate(self, val):
+        self._fs_teammate = val
+
+    @property
+    def fs_data(self):
+        if self._fs_teamname is None and self._is_frozen is False:
+            return '--'
+        return rf'\textbf{{{self.fs_teamname}}} {self.fs_teammate}, {self.fs_time}분'
+
+    @property
+    def fs_data_short(self):
+        if self._fs_teamname is None and self._is_frozen is False:
+            return '--'
+        return rf'\textbf{{{self.fs_teamname}}}, {self.fs_time}분'
+
+    @property
+    def author(self):
+        if self._author is None:
+            return 'placeholder'
+        return self._author
+
+    @author.setter
+    def author(self, val):
+        self._author = val
+
+    def __repr__(self):
+        return f'''{self.id} - {self.name}
+{self.ac_num}/{self.total_sub} ({self.ac_ratio})
+First solve : {self.fs_teamname}, {self.fs_teammate}, {self.fs_time}'''
+
+    def split_teamname(self, s):
+        team_par_index = s.index('(')  # looks like spotboard sanitize () to ❨❩
+        self.fs_teamname = s[:team_par_index].strip()
+        self.fs_teammate = s[team_par_index:].strip()
+
+    def beamer_str(self, *, indent=' ' * 4):
+        return rf'''{indent}% {self.id} - {self.name}
+{indent}\begin{{itemize}}
+{indent}{indent}\item 제출 {self.total_sub}번, 정답 {self.ac_num}팀 (정답률 {self.ac_ratio})
+{indent}{indent}\item 처음 푼 팀: {self.fs_data}
+{indent}{indent}\item 출제자: \texttt{{{self.author}}}
+{indent}\end{{itemize}}
+'''
+
+
 class SpotboardAnalyzer:
     '''
     A data structure handling Spotboard json data.
@@ -46,7 +198,7 @@ class SpotboardAnalyzer:
             problem_list = [problem['id'] for problem in self.problems]
         if contest_time is None:
             contest_time = self.runs_json['time']['contestTime'] // 60
-        self.team_ac = {team['id']: set() for team in self.teams}
+        team_ac = {team['id']: set() for team in self.teams}
 
         run_data = [['Interval', 'Yes', 'No', 'Pending']]
         for t in range(0, contest_time + 1, interval):
@@ -55,19 +207,53 @@ class SpotboardAnalyzer:
         for cur_run in runs:
             if cur_run['problem'] not in problem_list:
                 continue
-            if cur_run['problem'] in self.team_ac[cur_run['team']]:
+            if cur_run['problem'] in team_ac[cur_run['team']]:
                 continue
             tid = cur_run['submissionTime'] // interval + 1
             if cur_run['frozen'] and is_frozen:
                 run_data[tid][3] += 1
             elif cur_run['result'] == 'Yes':
                 run_data[tid][1] += 1
-                self.team_ac[cur_run['team']].add(cur_run['problem'])
+                team_ac[cur_run['team']].add(cur_run['problem'])
             else:
                 run_data[tid][2] -= 1
         for i in range(len(run_data)):
             run_data[i] = [str(x) for x in run_data[i]]
         return run_data
+
+    def generate_problem_data(self, prob_id, is_frozen=True):
+        contest_prob = BOJContestProblem()
+        contest_prob.id = self.problems[prob_id]['name']
+        contest_prob.name = self.problems[prob_id]['title']
+        contest_prob.total_sub = 0
+        contest_prob.ac_num = 0
+
+        team_ac = {team['id']: set() for team in self.teams}
+
+        runs = self.runs_json['runs']
+        is_first = False
+        for cur_run in runs:
+            if cur_run['problem'] != prob_id:
+                continue
+            if is_frozen and cur_run['frozen']:
+                continue
+            contest_prob.total_sub += 1
+            if cur_run['problem'] in self.team_ac[cur_run['team']]:
+                continue
+            if cur_run['result'] == 'Yes':
+                self.team_ac[cur_run['team']].add(cur_run['problem'])
+                contest_prob.ac_num += 1
+                if is_first is False:
+                    contest_prob.fs_time = cur_run['submissionTime']
+                    team_id = cur_run['team']
+                    fs_team = list(
+                        filter(lambda x: x['id'] == team_id, self.teams))[0]
+                    contest_prob.split_teamname(fs_team['name'])
+                    is_first = True
+
+        contest_prob.is_frozen = is_frozen
+        print(contest_prob.beamer_str())
+        return contest_prob
 
     def export_run_data(self, run_data, path):
         '''
@@ -116,28 +302,15 @@ class SpotboardAnalyzer:
         for problem_list, filename in zip(problem_lists, filenames):
             self.export_run_data(self.generate_run_data(
                 problem_list=problem_list, **kwargs), filename)
+            problem_id = problem_list[0]
+            self.generate_problem_data(problem_id)
 
 
 class BOJStatisticsAnalyzer:
     '''
     A data structure which easily converts BOJ Statistics to LaTeX format,
-    especially aligned with UCPC editorial. 
+    especially aligned with UCPC editorial.
     '''
-    class BOJContestProblem:
-        def __init__(self):
-            self.id = None
-            self.name = None
-            self.ac_num = None
-            self.ac_ratio = None
-            self.total_sub = None
-            self.fs_time = '-'
-            self.fs_teamname = '-'
-            self.fs_teammate = '-, -, -'
-
-        def __repr__(self):
-            return f'''{self.id} - {self.name}
-{self.ac_num}/{self.total_sub} ({self.ac_ratio})
-First solve : {self.fs_teamname}, {self.fs_teammate}, {self.fs_time}'''
 
     def __init__(self, html_page):
         '''
@@ -162,7 +335,7 @@ First solve : {self.fs_teamname}, {self.fs_teammate}, {self.fs_time}'''
         contest_title = arr[0][:-5].strip()
         prob_nums = (index_r(arr, 1, contest_title, '합계') -
                      index_r(arr, 1, contest_title, '문제 통계') - 1)
-        self.boj_probs = [self.BOJContestProblem() for _ in range(prob_nums)]
+        self.boj_probs = [BOJContestProblem() for _ in range(prob_nums)]
         prob_index = index_r(arr, 1, contest_title, '질문')
         for i in range(prob_nums):
             j = prob_index + 2 * i
@@ -195,9 +368,7 @@ First solve : {self.fs_teamname}, {self.fs_teammate}, {self.fs_time}'''
             if prob_index == len(self.boj_probs):
                 break
             cur_prob = self.boj_probs[prob_index]
-            team_par_index = -arr[fs_index + 2][::-1].find('(') - 1
-            cur_prob.fs_teamname = arr[fs_index + 2][:team_par_index].strip()
-            cur_prob.fs_teammate = arr[fs_index + 2][team_par_index:].strip()
+            cur_prob.split_teamname(arr[fs_index + 2])
             cur_prob.fs_time = arr[fs_index + 3][1:].strip()
             fs_index += 4
 
@@ -214,20 +385,10 @@ First solve : {self.fs_teamname}, {self.fs_teammate}, {self.fs_time}'''
           defaults to current sys.stdout.
         '''
         def ratio_conv(ratio):
-            return ratio[:-1] + "\%"
+            return ratio[:-1] + '\%'
         for boj_prob in self.boj_probs:
             indent = ' ' * tab_size if is_space else '\t'
-            if int(boj_prob.ac_num):
-                fs_data = rf'\textbf{{{boj_prob.fs_teamname}}} {boj_prob.fs_teammate}, {boj_prob.fs_time}'
-            else:
-                fs_data = '--'
-            print(rf'''{indent}% {boj_prob.id} - {boj_prob.name}
-{indent}\begin{{itemize}}
-{indent}{indent}\item 제출 {boj_prob.total_sub}번, 정답 {boj_prob.ac_num}팀 (정답률 {ratio_conv(boj_prob.ac_ratio)})
-{indent}{indent}\item 처음 푼 팀: {fs_data} 
-{indent}{indent}\item 출제자: \texttt{{placeholder}}
-{indent}\end{{itemize}}
-''', file=fd)
+            print(boj_prob.beamer_str(indent=indent), file=fd)
 
 
 if __name__ == '__main__':
