@@ -11,7 +11,7 @@ class BOJContestProblem:
         self._total_sub = None
         self._fs_time = None
         self._fs_teamname = None
-        self._fs_teammate = None
+        self._fs_members = None
         self._author = None
 
     @property
@@ -98,23 +98,23 @@ class BOJContestProblem:
         self._fs_teamname = val
 
     @property
-    def fs_teammate(self):
-        if self._fs_teammate is None:
+    def fs_members(self):
+        if self._fs_members is None:
             if self._is_frozen:
                 return '(?, ?, ?)'
             else:
                 return '-, -, -'
-        return self._fs_teammate
+        return self._fs_members
 
-    @fs_teammate.setter
-    def fs_teammate(self, val):
-        self._fs_teammate = val
+    @fs_members.setter
+    def fs_members(self, val):
+        self._fs_members = val
 
     @property
     def fs_data(self):
         if self._fs_teamname is None and self._is_frozen is False:
             return '--'
-        return rf'\textbf{{{self.fs_teamname}}} {self.fs_teammate}, {self.fs_time}분'
+        return rf'\textbf{{{self.fs_teamname}}} {self.fs_members}, {self.fs_time}분'
 
     @property
     def fs_data_short(self):
@@ -135,12 +135,12 @@ class BOJContestProblem:
     def __repr__(self):
         return f'''{self.id} - {self.name}
 {self.ac_num}/{self.total_sub} ({self.ac_ratio})
-First solve : {self.fs_teamname}, {self.fs_teammate}, {self.fs_time}'''
+First solve : {self.fs_teamname}, {self.fs_members}, {self.fs_time}'''
 
     def split_teamname(self, s):
         team_par_index = s.index('(')  # looks like spotboard sanitize () to ❨❩
         self.fs_teamname = s[:team_par_index].strip()
-        self.fs_teammate = s[team_par_index:].strip()
+        self.fs_members = s[team_par_index:].strip()
 
     def beamer_str(self, *, indent=' ' * 4):
         return rf'''{indent}% {self.id} - {self.name}
