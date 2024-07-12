@@ -1,0 +1,35 @@
+\usepackage{icpcbar}
+%% icpcbar shorthand commands
+\newcommand{\ucpcsubbar}[5]{
+    \resizebox{%
+        \ifdim\width>#1
+            #1
+        \else
+            \width
+        \fi
+    }{%
+        \ifdim\height>#2
+            #2
+        \else
+            \height
+        \fi
+    }{%
+        \icpcsubbar{#3}{#4}{#5}%
+    }
+}
+\newcommand{\ucpcpresubbar}[3]{
+    \ucpcsubbar{#1}{#2}{#3}{3}{180}
+}
+\newcommand{\ucpcfinalsubbar}[3]{
+    \ucpcsubbar{#1}{#2}{#3}{5}{300}
+}
+\newcommand{\ucpcpreprobsubbar}[1]{
+    \begin{adjustbox}{right, valign=b}
+        \ucpcpresubbar{0.8\textwidth}{0.2\textheight}{#1}
+    \end{adjustbox}
+}
+\newcommand{\ucpcfinalprobsubbar}[1]{
+    \begin{adjustbox}{right, valign=b}
+        \ucpcfinalsubbar{0.8\textwidth}{0.2\textheight}{#1}
+    \end{adjustbox}
+}
